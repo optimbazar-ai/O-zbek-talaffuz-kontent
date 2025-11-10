@@ -113,20 +113,64 @@ Javobingiz uchta maydondan iborat JSON ob'ekti bo'lishi kerak:
   }
 }
 
+// Gemini AI bilan mavzuga mos inglizcha kalit so'zlar yaratish
+async function generateImageKeywords(prompt: string): Promise<string> {
+    try {
+        const keywordPrompt = `You are an expert at generating image search keywords. 
+
+Given this topic/prompt (which may be in Uzbek or English), generate 3-5 highly relevant English keywords for finding the best matching images on Unsplash.
+
+Topic: "${prompt}"
+
+Rules:
+1. Output ONLY the keywords separated by spaces
+2. Use English words that match the topic
+3. Be specific and relevant
+4. Focus on visual elements
+5. Use professional photography terms
+
+Examples:
+- Topic: "Messi va Ronaldo" → Output: "messi ronaldo football soccer player"
+- Topic: "Sun'iy intellekt" → Output: "artificial intelligence AI technology robot"
+- Topic: "O'zbekiston" → Output: "uzbekistan central asia samarkand architecture"
+- Topic: "Tog'lar va tabiat" → Output: "mountains nature landscape hiking wilderness"
+
+Now generate keywords for the topic above (output ONLY keywords):`;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.0-flash-exp',
+            contents: keywordPrompt,
+        });
+
+        const keywords = response.text.trim();
+        
+        console.log(`🤖 AI yaratgan kalit so'zlar: ${keywords}`);
+        return keywords;
+    } catch (error) {
+        console.warn('⚠️ AI keywords yaratishda xato, oddiy usuldan foydalanamiz:', error);
+        // Fallback: simple extraction
+        return prompt.split(/[,.\s]+/)
+            .filter(w => w.length > 2)
+            .slice(0, 5)
+            .join(' ');
+    }
+}
+
 export async function generateImage(prompt: string, overrideQuery?: string): Promise<string[]> {
     try {
-        const baseQuery = overrideQuery && overrideQuery.trim().length > 0
-            ? overrideQuery.trim()
-            : prompt;
-
-        // Extract key search terms from the prompt or override (English keywords work best)
-        const keywords = baseQuery.split(/[,.\s]+/)
-            .filter(w => w.length > 2)
-            .slice(0, 8)
-            .join(' ');
-        const searchQuery = encodeURIComponent(keywords || 'nature landscape');
+        let keywords: string;
         
-        console.log('🔍 Unsplash dan qidirilmoqda:', keywords);
+        if (overrideQuery && overrideQuery.trim().length > 0) {
+            // Foydalanuvchi o'zi kalit so'z bergan
+            keywords = overrideQuery.trim();
+            console.log(`👤 Foydalanuvchi kalit so'zi: ${keywords}`);
+        } else {
+            // AI dan kalit so'zlar so'raymiz
+            keywords = await generateImageKeywords(prompt);
+        }
+        
+        const searchQuery = encodeURIComponent(keywords);
+        console.log(`🔍 Unsplash dan qidirilmoqda: ${keywords}`);
         
         // Use Unsplash API for high-quality, topic-relevant images
         const UNSPLASH_ACCESS_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY || 'EfKQ8Gr6e9EMEkbG9PL3YKnbDQamvfqtiKL0ji6T1r8';
