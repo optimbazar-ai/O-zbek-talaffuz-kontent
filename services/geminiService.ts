@@ -129,7 +129,7 @@ export async function generateImage(prompt: string, overrideQuery?: string): Pro
         console.log('🔍 Unsplash dan qidirilmoqda:', keywords);
         
         // Use Unsplash API for high-quality, topic-relevant images
-        const UNSPLASH_ACCESS_KEY = 'EfKQ8Gr6e9EMEkbG9PL3YKnbDQamvfqtiKL0ji6T1r8';
+        const UNSPLASH_ACCESS_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY || 'EfKQ8Gr6e9EMEkbG9PL3YKnbDQamvfqtiKL0ji6T1r8';
         const imagePromises = [];
         
         for (let i = 0; i < 4; i++) {
@@ -172,7 +172,7 @@ export async function generateImage(prompt: string, overrideQuery?: string): Pro
                 .catch(error => {
                     console.warn(`⚠️ Unsplash rasm ${i + 1} yuklanmadi:`, error.message);
                     // Fallback to Pexels as secondary source
-                    const PEXELS_API_KEY = '563492ad6f91700001000001c69e2c70104b40298c1a5f26edc22c47';
+                    const PEXELS_API_KEY = import.meta.env.VITE_PEXELS_API_KEY || '563492ad6f91700001000001c69e2c70104b40298c1a5f26edc22c47';
                     const pexelsUrl = `https://api.pexels.com/v1/search?query=${searchQuery}&orientation=portrait&per_page=1&page=${page}`;
                     
                     return fetch(pexelsUrl, {
