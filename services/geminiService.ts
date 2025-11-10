@@ -265,9 +265,52 @@ function createGradientPlaceholder(prompt: string, index: number = 0): string {
     return dataUrl.split(',')[1];
 }
 
+// O'zbek talaffuzini yaxshilash uchun matnni tayyorlash
+function preprocessUzbekText(text: string): string {
+    let processed = text;
+    
+    // 1. "o" harfini to'g'ri talaffuz qilish uchun
+    // "o" oldiga fonetik ko'rsatma qo'shamiz
+    processed = processed.replace(/\bo\b/gi, 'o (o harfini aniq o kabi ayt)');
+    processed = processed.replace(/([^aeiouąęėįųūо])o([^aeiouąęėįųūо])/gi, '$1o(aniq o)$2');
+    
+    // 2. "i" harfini qisqa talaffuz qilish uchun
+    // Cho'zilmasligi kerak bo'lgan joylarda
+    processed = processed.replace(/\bi\b/gi, 'i (qisqa i)');
+    processed = processed.replace(/([^aeiouąęėįųūо])i([^aeiouąęėįųūо])/gi, '$1i(qisqa)$2');
+    
+    // 3. O'zbek-spetsifik tovushlar uchun ko'rsatmalar
+    processed = processed.replace(/oʻ/g, 'o\'(katta o)');
+    processed = processed.replace(/gʻ/g, 'g\'(yumshoq g)');
+    
+    return processed;
+}
+
+// TTS uchun maxsus prompt yaratish
+function createUzbekTTSPrompt(script: string): string {
+    const preprocessed = preprocessUzbekText(script);
+    
+    return `You are speaking in Uzbek language. Follow these pronunciation rules strictly:
+
+1. VOWEL 'O': Pronounce as /ɔ/ (open back rounded vowel), NOT as 'a'. Think of English "caught" or Russian "кот".
+2. VOWEL 'I': Pronounce as short /i/ (close front unrounded vowel), like English "bit" NOT "beat". Keep it SHORT.
+3. SPEED: Speak at normal pace, not too slow.
+4. STRESS: Natural Uzbek stress patterns - typically on the last syllable.
+5. CONSONANTS: Clear and distinct, especially:
+   - Q: uvular /q/ sound
+   - G': soft /ɣ/ sound
+   - O': back /ɒ/ sound
+
+Text to speak:
+"${preprocessed}"
+
+Remember: 'o' = /ɔ/ (open O), 'i' = /i/ (short I).`;
+}
+
 export async function generateAudio(script: string, voice: VoiceOption): Promise<string> {
     try {
-        const ttsPrompt = `TTS the following, speaking naturally and clearly in Uzbek with correct 'o' vowel sounds: "${script}"`;
+        // O'zbek talaffuzi uchun maxsus prompt
+        const ttsPrompt = createUzbekTTSPrompt(script);
         
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",
