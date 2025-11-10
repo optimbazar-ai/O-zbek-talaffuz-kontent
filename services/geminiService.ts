@@ -126,31 +126,36 @@ export async function generateImage(prompt: string, overrideQuery?: string): Pro
             .join(' ');
         const searchQuery = encodeURIComponent(keywords || 'nature landscape');
         
-        console.log('Searching for images with keywords:', keywords);
+        console.log('🔍 Unsplash dan qidirilmoqda:', keywords);
         
-        // Use Pexels API for topic-relevant images
-        const PEXELS_API_KEY = '563492ad6f91700001000001c69e2c70104b40298c1a5f26edc22c47';
+        // Use Unsplash API for high-quality, topic-relevant images
+        const UNSPLASH_ACCESS_KEY = 'EfKQ8Gr6e9EMEkbG9PL3YKnbDQamvfqtiKL0ji6T1r8';
         const imagePromises = [];
         
         for (let i = 0; i < 4; i++) {
             // Each request gets a different page to get varied images
             const page = i + 1;
-            const pexelsUrl = `https://api.pexels.com/v1/search?query=${searchQuery}&orientation=portrait&per_page=1&page=${page}`;
+            const unsplashUrl = `https://api.unsplash.com/search/photos?query=${searchQuery}&orientation=portrait&per_page=1&page=${page}&content_filter=high`;
             
             imagePromises.push(
-                fetch(pexelsUrl, {
-                    headers: { 'Authorization': PEXELS_API_KEY }
+                fetch(unsplashUrl, {
+                    headers: { 
+                        'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`,
+                        'Accept-Version': 'v1'
+                    }
                 })
                 .then(async response => {
                     if (!response.ok) {
-                        throw new Error(`Pexels API error: ${response.status}`);
+                        throw new Error(`Unsplash API error: ${response.status}`);
                     }
                     const data = await response.json();
                     
-                    if (data.photos && data.photos.length > 0) {
-                        // Use large size for better quality
-                        const imageUrl = data.photos[0].src.large;
-                        console.log(`Image ${i + 1} found:`, data.photos[0].alt || imageUrl);
+                    if (data.results && data.results.length > 0) {
+                        const photo = data.results[0];
+                        // Use regular size for better quality (portrait orientation)
+                        const imageUrl = photo.urls.regular;
+                        console.log(`✅ Rasm ${i + 1}:`, photo.alt_description || photo.description || 'Unsplash photo');
+                        console.log(`   📷 Fotograf: ${photo.user.name}`);
                         
                         // Fetch and convert to base64
                         const imgResponse = await fetch(imageUrl);
@@ -165,31 +170,57 @@ export async function generateImage(prompt: string, overrideQuery?: string): Pro
                     }
                 })
                 .catch(error => {
-                    console.warn(`Pexels rasm ${i + 1} yuklanmadi:`, error.message);
-                    // Fallback to Picsum for this image
-                    return fetch(`https://picsum.photos/600/1067?random=${Date.now()}_${i}`)
-                        .then(async resp => {
-                            if (!resp.ok) throw new Error('Picsum failed');
-                            const blob = await resp.blob();
+                    console.warn(`⚠️ Unsplash rasm ${i + 1} yuklanmadi:`, error.message);
+                    // Fallback to Pexels as secondary source
+                    const PEXELS_API_KEY = '563492ad6f91700001000001c69e2c70104b40298c1a5f26edc22c47';
+                    const pexelsUrl = `https://api.pexels.com/v1/search?query=${searchQuery}&orientation=portrait&per_page=1&page=${page}`;
+                    
+                    return fetch(pexelsUrl, {
+                        headers: { 'Authorization': PEXELS_API_KEY }
+                    })
+                    .then(async resp => {
+                        if (!resp.ok) throw new Error('Pexels failed');
+                        const data = await resp.json();
+                        if (data.photos && data.photos.length > 0) {
+                            console.log(`🔄 Pexels dan olingan rasm ${i + 1}`);
+                            const imageUrl = data.photos[0].src.large;
+                            const imgResponse = await fetch(imageUrl);
+                            const blob = await imgResponse.blob();
                             const buffer = await blob.arrayBuffer();
                             const base64 = btoa(
                                 new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
                             );
                             return `data:image/jpeg;base64,${base64}`;
-                        })
-                        .catch(() => {
-                            console.warn(`Gradient yaratilmoqda rasm ${i + 1} uchun`);
-                            return `data:image/jpeg;base64,${createGradientPlaceholder(prompt, i)}`;
-                        });
+                        }
+                        throw new Error('Pexels no results');
+                    })
+                    .catch(() => {
+                        console.warn(`⚠️ Picsum fallback rasm ${i + 1}`);
+                        // Final fallback to Picsum
+                        return fetch(`https://picsum.photos/600/1067?random=${Date.now()}_${i}`)
+                            .then(async resp => {
+                                if (!resp.ok) throw new Error('Picsum failed');
+                                const blob = await resp.blob();
+                                const buffer = await blob.arrayBuffer();
+                                const base64 = btoa(
+                                    new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+                                );
+                                return `data:image/jpeg;base64,${base64}`;
+                            })
+                            .catch(() => {
+                                console.warn(`🎨 Gradient yaratilmoqda rasm ${i + 1} uchun`);
+                                return `data:image/jpeg;base64,${createGradientPlaceholder(prompt, i)}`;
+                            });
+                    });
                 })
             );
             
-            // Small delay between requests to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 200));
+            // Small delay between requests to avoid rate limiting (Unsplash: 50 req/hour)
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
         
         const images = await Promise.all(imagePromises);
-        console.log('All images loaded successfully:', images.length);
+        console.log('🎉 Barcha rasmlar yuklandi:', images.length);
         return images;
     } catch (error) {
         console.error("Rasmlar yaratishda xato:", error);
