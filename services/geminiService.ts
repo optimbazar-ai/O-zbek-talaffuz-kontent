@@ -265,46 +265,77 @@ function createGradientPlaceholder(prompt: string, index: number = 0): string {
     return dataUrl.split(',')[1];
 }
 
-// O'zbek talaffuzini yaxshilash uchun matnni tayyorlash
-function preprocessUzbekText(text: string): string {
-    let processed = text;
+// O'zbek tovushlarini aniqlash
+function analyzeUzbekPhonetics(text: string): string {
+    // Matnni o'zgartirmaslik, faqat fonetik xususiyatlarni aniqlash
+    const hasO = /[oо]/i.test(text);
+    const hasI = /[iи]/i.test(text);
+    const hasOApostrophe = /oʻ|o'/g.test(text);
+    const hasGApostrophe = /gʻ|g'/g.test(text);
     
-    // 1. "o" harfini to'g'ri talaffuz qilish uchun
-    // "o" oldiga fonetik ko'rsatma qo'shamiz
-    processed = processed.replace(/\bo\b/gi, 'o (o harfini aniq o kabi ayt)');
-    processed = processed.replace(/([^aeiouąęėįųūо])o([^aeiouąęėįųūо])/gi, '$1o(aniq o)$2');
+    let phoneticNotes = [];
     
-    // 2. "i" harfini qisqa talaffuz qilish uchun
-    // Cho'zilmasligi kerak bo'lgan joylarda
-    processed = processed.replace(/\bi\b/gi, 'i (qisqa i)');
-    processed = processed.replace(/([^aeiouąęėįųūо])i([^aeiouąęėįųūо])/gi, '$1i(qisqa)$2');
+    if (hasO) {
+        phoneticNotes.push('Letter O appears: pronounce as /ɔ/ (open rounded O), like Russian "кот", NOT as /a/');
+    }
+    if (hasI) {
+        phoneticNotes.push('Letter I appears: pronounce SHORT /i/ like "bit", NOT elongated "bee"');
+    }
+    if (hasOApostrophe) {
+        phoneticNotes.push('Letter Oʻ appears: pronounce as back /ɒ/ like English "hot"');
+    }
+    if (hasGApostrophe) {
+        phoneticNotes.push('Letter Gʻ appears: pronounce as soft /ɣ/ (voiced velar fricative)');
+    }
     
-    // 3. O'zbek-spetsifik tovushlar uchun ko'rsatmalar
-    processed = processed.replace(/oʻ/g, 'o\'(katta o)');
-    processed = processed.replace(/gʻ/g, 'g\'(yumshoq g)');
-    
-    return processed;
+    return phoneticNotes.join('\n');
 }
 
-// TTS uchun maxsus prompt yaratish
+// TTS uchun maxsus prompt yaratish (MATNNI O'ZGARTIRMASDAN)
 function createUzbekTTSPrompt(script: string): string {
-    const preprocessed = preprocessUzbekText(script);
+    const phoneticGuidance = analyzeUzbekPhonetics(script);
     
-    return `You are speaking in Uzbek language. Follow these pronunciation rules strictly:
+    return `You are a professional Uzbek language voice actor. Your task is to read the following text in clear, natural Uzbek pronunciation.
 
-1. VOWEL 'O': Pronounce as /ɔ/ (open back rounded vowel), NOT as 'a'. Think of English "caught" or Russian "кот".
-2. VOWEL 'I': Pronounce as short /i/ (close front unrounded vowel), like English "bit" NOT "beat". Keep it SHORT.
-3. SPEED: Speak at normal pace, not too slow.
-4. STRESS: Natural Uzbek stress patterns - typically on the last syllable.
-5. CONSONANTS: Clear and distinct, especially:
-   - Q: uvular /q/ sound
-   - G': soft /ɣ/ sound
-   - O': back /ɒ/ sound
+🎯 CRITICAL PRONUNCIATION RULES FOR UZBEK:
 
-Text to speak:
-"${preprocessed}"
+1. VOWEL 'O' (Latin: o, Cyrillic: о):
+   - IPA: /ɔ/ (open-mid back rounded vowel)
+   - Similar to: English "caught", "dog" | Russian "кот", "дом" | Turkish "top"
+   - ⚠️ NEVER pronounce as /a/ or /ɑ/!
+   - Examples:
+     * "omon" = /ɔmɔn/ NOT /aman/
+     * "salom" = /sɔlɔm/ NOT /salam/
 
-Remember: 'o' = /ɔ/ (open O), 'i' = /i/ (short I).`;
+2. VOWEL 'I' (Latin: i, Cyrillic: и):
+   - IPA: /i/ (close front unrounded vowel)
+   - Similar to: English "bit", "sit" | Russian "бит" | Turkish "ip"
+   - ⚠️ Keep it SHORT! Do NOT elongate to /iː/
+   - Examples:
+     * "til" = /til/ NOT /tiːl/
+     * "ish" = /iʃ/ NOT /iːʃ/
+
+3. SPECIAL UZBEK LETTERS:
+   - Oʻ (o with apostrophe): /ɒ/ - back vowel, like English "hot"
+   - Gʻ (g with apostrophe): /ɣ/ - soft voiced fricative
+   - Q: /q/ - uvular stop
+   - H: /h/ - voiceless glottal fricative
+
+4. PROSODY:
+   - Speed: Natural, conversational pace (not slow)
+   - Stress: Generally on the last syllable of words
+   - Intonation: Natural Uzbek patterns
+
+${phoneticGuidance ? '📝 DETECTED IN THIS TEXT:\n' + phoneticGuidance + '\n' : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📖 TEXT TO READ (read this EXACTLY as written, with correct Uzbek pronunciation):
+
+"${script}"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚡ Remember: This is UZBEK language. Maintain authentic Uzbek pronunciation throughout!`;
 }
 
 export async function generateAudio(script: string, voice: VoiceOption): Promise<string> {
