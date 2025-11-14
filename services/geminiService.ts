@@ -126,17 +126,9 @@ export async function generateImage(prompt: string, overrideQuery?: string): Pro
                     try {
                         const response = await ai.models.generateContent({
                             model: "gemini-2.0-flash-exp",
-                            contents: [
-                                {
-                                    parts: [
-                                        {
-                                            text: `Shu mavzu uchun yuqori sifatli, fotorealistik rasm yarating: "${prompt}". Rasm portrait orientatsiyada (600x1067 piksel) bo'lishi kerak. Rasm raqami: ${i + 1}/4`
-                                        }
-                                    ]
-                                }
-                            ],
+                            contents: `Yuqori sifatli, fotorealistik rasm yarating. Mavzu: "${prompt}". Rasm portrait orientatsiyada (600x1067 piksel) bo'lishi kerak. Rasm raqami: ${i + 1}/4. Faqat rasmni yarating, matn yozma.`,
                             config: {
-                                responseModalities: ["image"],
+                                responseModalities: [Modality.IMAGE],
                             },
                         });
 
