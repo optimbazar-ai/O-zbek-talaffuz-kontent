@@ -1,0 +1,40 @@
+{
+  "name": "uzbek-content-bot-backend",
+  "version": "1.0.0",
+  "description": "Telegram bot for automatic Instagram content generation and posting",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "instagram",
+    "content",
+    "automation"
+  ],
+  "author": "OptimBazar AI",
+  "license": "MIT",
+  "dependencies": {
+    "telegraf": "^4.14.1",
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
+    "mongoose": "^8.0.0",
+    "node-cron": "^3.0.2",
+    "form-data": "^4.0.0",
+    "sharp": "^0.33.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/node-cron": "^3.0.11",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "eslint": "^8.55.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.2",
+    "@typescript-eslint/parser": "^6.13.2"
+  }
+}

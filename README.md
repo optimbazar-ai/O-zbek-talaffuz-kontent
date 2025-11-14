@@ -1,29 +1,32 @@
-# 🎬 O'zbek AI Reels Creator
+# 🎬 O'zbek AI Reels Creator + Telegram Bot
 
-AI-powered Instagram Reels yaratuvchi - Gemini AI bilan.
+AI-powered Instagram Reels yaratuvchi + Telegram bot orqali avtomatik posting.
 
 ## ✨ Funksiyalar
 
-- 🤖 **AI Ssenariy** - Avtomatik script yaratish
-- 🖼️ **4 ta rasm manbasi:**
-  - Avtomatik (Pexels API)
-  - Custom kalit so'zlar
-  - Rasm yuklash (8 tagacha)
-  - Video yuklash (4-8 kadr)
-- 🎵 **3 ta audio rejim:**
-  - AI ovoz (7 xil)
-  - O'z musiqangiz
-  - AI ovoz + Orqa musiqa
+### 🌐 Frontend (Web App)
+- 🤖 **AI Ssenariy** - Gemini orqali avtomatik script yaratish
+- 🖼️ **Rasm generatsiya** - Imagen 3 orqali haqiqiy rasmlar
+- 🎵 **AI Ovoz** - O'zbek talaffuzi bilan TTS
 - 📥 **Video yuklab olish** - MP4 format
 - 🔍 **Google Search** - Real-time ma'lumot
+
+### 🤖 Backend (Telegram Bot)
+- ✅ **Telegram Bot** - `/generate`, `/schedule`, `/status` commands
+- ✅ **Avtomatik Scheduling** - Har kuni 09:00 da 10 ta rasm generatsiya
+- ✅ **Instagram Integration** - Meta API orqali avtomatik posting
+- ✅ **Database** - MongoDB'da post history
+- ✅ **Analytics** - Post statistics va engagement
 
 ## 🚀 Local da ishlatish
 
 ### Talablar
 - Node.js 18+
 - Gemini API key ([olish](https://aistudio.google.com/apikey))
+- Telegram Bot Token (@BotFather'dan)
+- MongoDB Atlas (yoki local MongoDB)
 
-### O'rnatish
+### Frontend O'rnatish
 
 ```bash
 # 1. Repository ni clone qiling
@@ -44,6 +47,26 @@ npm run dev
 ```
 
 Brauzerda oching: http://localhost:3004
+
+### Backend (Telegram Bot) O'rnatish
+
+```bash
+# 1. Backend dependencies o'rnating
+npm run backend:install
+
+# 2. Backend .env yarating
+cp backend/.env.example backend/.env
+
+# 3. Backend .env'da quyidagilarni qo'shing:
+TELEGRAM_BOT_TOKEN=your_bot_token
+VITE_GEMINI_API_KEY=your_gemini_key
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/uzbek-content
+
+# 4. Backend'ni ishga tushiring
+npm run backend:dev
+```
+
+Bot ishga tushdi! Telegram'da @BotFather orqali yaratgan bot'ingizga `/start` yozing.
 
 ## 📦 Deploy (Vercel)
 
