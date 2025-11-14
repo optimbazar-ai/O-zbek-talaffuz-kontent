@@ -245,77 +245,116 @@ function createGradientPlaceholder(prompt: string, index: number = 0): string {
     return dataUrl.split(',')[1];
 }
 
-// O'zbek tovushlarini aniqlash
+// O'zbek tovushlarini aniqlash va fonetik xususiyatlarni tahlil qilish
 function analyzeUzbekPhonetics(text: string): string {
-    // Matnni o'zgartirmaslik, faqat fonetik xususiyatlarni aniqlash
-    const hasO = /[oо]/i.test(text);
-    const hasI = /[iи]/i.test(text);
-    const hasOApostrophe = /oʻ|o'/g.test(text);
-    const hasGApostrophe = /gʻ|g'/g.test(text);
+    const phonetics: string[] = [];
     
-    let phoneticNotes = [];
-    
-    if (hasO) {
-        phoneticNotes.push('Letter O appears: pronounce as /ɔ/ (open rounded O), like Russian "кот", NOT as /a/');
+    // Vowel analysis
+    if (/[oо]/i.test(text)) {
+        phonetics.push('🔤 Letter "O" (o, о): Pronounce as /ɔ/ - rounded back vowel like Russian "кот" or English "caught". NEVER like /a/');
     }
-    if (hasI) {
-        phoneticNotes.push('Letter I appears: pronounce SHORT /i/ like "bit", NOT elongated "bee"');
+    if (/[uу]/i.test(text)) {
+        phonetics.push('🔤 Letter "U" (u, у): Pronounce as /u/ - like English "boot", keep it rounded and back');
     }
-    if (hasOApostrophe) {
-        phoneticNotes.push('Letter Oʻ appears: pronounce as back /ɒ/ like English "hot"');
+    if (/[iи]/i.test(text)) {
+        phonetics.push('🔤 Letter "I" (i, и): Pronounce as SHORT /i/ - like English "bit", NOT elongated /iː/');
     }
-    if (hasGApostrophe) {
-        phoneticNotes.push('Letter Gʻ appears: pronounce as soft /ɣ/ (voiced velar fricative)');
+    if (/[eе]/i.test(text)) {
+        phonetics.push('🔤 Letter "E" (e, е): Pronounce as /e/ - like English "bed", clear and crisp');
+    }
+    if (/[aа]/i.test(text)) {
+        phonetics.push('🔤 Letter "A" (a, а): Pronounce as /a/ - like English "father", open front vowel');
     }
     
-    return phoneticNotes.join('\n');
+    // Special Uzbek letters
+    if (/oʻ|o'/g.test(text)) {
+        phonetics.push('🔤 Letter "Oʻ" (o with apostrophe): Pronounce as /ɒ/ - back vowel like English "hot"');
+    }
+    if (/gʻ|g'/g.test(text)) {
+        phonetics.push('🔤 Letter "Gʻ" (g with apostrophe): Pronounce as /ɣ/ - soft voiced velar fricative, like German "Bach"');
+    }
+    if (/[qқ]/i.test(text)) {
+        phonetics.push('🔤 Letter "Q" (q, қ): Pronounce as /q/ - uvular stop, deeper than English /k/');
+    }
+    if (/[hҳ]/i.test(text)) {
+        phonetics.push('🔤 Letter "H" (h, ҳ): Pronounce as /h/ - voiceless glottal fricative');
+    }
+    if (/[nҳ]/i.test(text)) {
+        phonetics.push('🔤 Letter "Ng" (ng, нг): Pronounce as /ŋ/ - like English "sing"');
+    }
+    
+    return phonetics.length > 0 ? phonetics.join('\n') : '';
 }
 
-// TTS uchun maxsus prompt yaratish (MATNNI O'ZGARTIRMASDAN)
+// TTS uchun maxsus prompt yaratish - O'ZBEK TALAFFUZINI YAXSHILASH
 function createUzbekTTSPrompt(script: string): string {
     const phoneticGuidance = analyzeUzbekPhonetics(script);
     
-    return `You are a professional Uzbek language voice actor. Your task is to read the following text in clear, natural Uzbek pronunciation.
+    return `You are a native Uzbek language voice actor with perfect pronunciation. Your task is to read the following text with authentic, clear Uzbek pronunciation. Speak naturally and conversationally.
 
-🎯 CRITICAL PRONUNCIATION RULES FOR UZBEK:
+═══════════════════════════════════════════════════════════════════════════════
+🎯 UZBEK PRONUNCIATION GUIDE - FOLLOW STRICTLY:
+═══════════════════════════════════════════════════════════════════════════════
 
-1. VOWEL 'O' (Latin: o, Cyrillic: о):
-   - IPA: /ɔ/ (open-mid back rounded vowel)
-   - Similar to: English "caught", "dog" | Russian "кот", "дом" | Turkish "top"
-   - ⚠️ NEVER pronounce as /a/ or /ɑ/!
-   - Examples:
-     * "omon" = /ɔmɔn/ NOT /aman/
-     * "salom" = /sɔlɔm/ NOT /salam/
+📍 VOWELS (Unlilar):
+  • O (o, о): /ɔ/ - ROUNDED BACK VOWEL. Like Russian "кот" (kot), English "caught", Turkish "top"
+    ❌ NEVER /a/ or /ɑ/. Examples: "salom" /sɔlɔm/, "omon" /ɔmɔn/, "odam" /ɔdam/
+  
+  • U (u, у): /u/ - ROUNDED BACK VOWEL. Like English "boot", French "tu"
+    Examples: "shukar" /ʃukɑr/, "tur" /tur/
+  
+  • I (i, и): /i/ - SHORT FRONT VOWEL. Like English "bit", NOT "bee"
+    ❌ NEVER elongate to /iː/. Examples: "til" /til/, "ish" /iʃ/, "qil" /qil/
+  
+  • E (e, е): /e/ - OPEN FRONT VOWEL. Like English "bed"
+    Examples: "kel" /kel/, "sen" /sen/
+  
+  • A (a, а): /a/ - OPEN FRONT VOWEL. Like English "father"
+    Examples: "asal" /ɑsɑl/, "ata" /ɑtɑ/
 
-2. VOWEL 'I' (Latin: i, Cyrillic: и):
-   - IPA: /i/ (close front unrounded vowel)
-   - Similar to: English "bit", "sit" | Russian "бит" | Turkish "ip"
-   - ⚠️ Keep it SHORT! Do NOT elongate to /iː/
-   - Examples:
-     * "til" = /til/ NOT /tiːl/
-     * "ish" = /iʃ/ NOT /iːʃ/
+📍 SPECIAL UZBEK LETTERS:
+  • Oʻ (o with apostrophe): /ɒ/ - BACK VOWEL. Like English "hot", deeper than regular O
+    Examples: "oʻzbekcha" /ɒzbɛkʃɑ/, "koʻl" /kɒl/
+  
+  • Gʻ (g with apostrophe): /ɣ/ - SOFT FRICATIVE. Like German "Bach", Spanish "jota"
+    Examples: "gʻ" sound is softer than hard G
+  
+  • Q (q, қ): /q/ - UVULAR STOP. Deeper than English /k/, from throat
+    Examples: "qil" /qil/, "qanday" /qɑndɑj/
+  
+  • H (h, ҳ): /h/ - GLOTTAL FRICATIVE. Like English "hello"
+    Examples: "haqida" /hɑqidɑ/
 
-3. SPECIAL UZBEK LETTERS:
-   - Oʻ (o with apostrophe): /ɒ/ - back vowel, like English "hot"
-   - Gʻ (g with apostrophe): /ɣ/ - soft voiced fricative
-   - Q: /q/ - uvular stop
-   - H: /h/ - voiceless glottal fricative
+📍 CONSONANTS (Undoshlar):
+  • Sh (sh, ш): /ʃ/ - Like English "ship"
+  • Ch (ch, ч): /tʃ/ - Like English "chip"
+  • Zh (j, ж): /ʒ/ - Like English "vision"
+  • Ng (ng, нг): /ŋ/ - Like English "sing"
+  • Ts (ts, ц): /ts/ - Like English "cats"
 
-4. PROSODY:
-   - Speed: Natural, conversational pace (not slow)
-   - Stress: Generally on the last syllable of words
-   - Intonation: Natural Uzbek patterns
+📍 STRESS & INTONATION:
+  • Stress: Generally on the LAST SYLLABLE of words
+  • Speed: Natural, conversational pace - NOT slow or robotic
+  • Rhythm: Smooth and flowing, like native speaker
+  • Emotion: Warm, engaging, informative tone
 
-${phoneticGuidance ? '📝 DETECTED IN THIS TEXT:\n' + phoneticGuidance + '\n' : ''}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${phoneticGuidance ? '📝 DETECTED SOUNDS IN THIS TEXT:\n' + phoneticGuidance + '\n' : ''}
 
-📖 TEXT TO READ (read this EXACTLY as written, with correct Uzbek pronunciation):
+═══════════════════════════════════════════════════════════════════════════════
+📖 TEXT TO READ (read EXACTLY as written, with perfect Uzbek pronunciation):
+═══════════════════════════════════════════════════════════════════════════════
 
 "${script}"
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+═══════════════════════════════════════════════════════════════════════════════
 
-⚡ Remember: This is UZBEK language. Maintain authentic Uzbek pronunciation throughout!`;
+⚡ CRITICAL REMINDERS:
+  ✓ This is UZBEK language - use authentic Uzbek pronunciation
+  ✓ Speak naturally and conversationally
+  ✓ Do NOT translate or modify the text
+  ✓ Keep vowels clear and distinct
+  ✓ Maintain natural Uzbek rhythm and intonation
+  ✓ Be confident and engaging in your delivery`;
 }
 
 export async function generateAudio(script: string, voice: VoiceOption): Promise<string> {
