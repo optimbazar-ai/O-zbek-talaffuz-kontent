@@ -113,158 +113,55 @@ Javobingiz uchta maydondan iborat JSON ob'ekti bo'lishi kerak:
   }
 }
 
-// Gemini AI bilan mavzuga mos inglizcha kalit so'zlar yaratish
-async function generateImageKeywords(prompt: string): Promise<string> {
-    try {
-        const keywordPrompt = `You are an expert at generating image search keywords. 
-
-Given this topic/prompt (which may be in Uzbek or English), generate 3-5 highly relevant English keywords for finding the best matching images on Unsplash.
-
-Topic: "${prompt}"
-
-Rules:
-1. Output ONLY the keywords separated by spaces
-2. Use English words that match the topic
-3. Be specific and relevant
-4. Focus on visual elements
-5. Use professional photography terms
-
-Examples:
-- Topic: "Messi va Ronaldo" → Output: "messi ronaldo football soccer player"
-- Topic: "Sun'iy intellekt" → Output: "artificial intelligence AI technology robot"
-- Topic: "O'zbekiston" → Output: "uzbekistan central asia samarkand architecture"
-- Topic: "Tog'lar va tabiat" → Output: "mountains nature landscape hiking wilderness"
-
-Now generate keywords for the topic above (output ONLY keywords):`;
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash-exp',
-            contents: keywordPrompt,
-        });
-
-        const keywords = response.text.trim();
-        
-        console.log(`🤖 AI yaratgan kalit so'zlar: ${keywords}`);
-        return keywords;
-    } catch (error) {
-        console.warn('⚠️ AI keywords yaratishda xato, oddiy usuldan foydalanamiz:', error);
-        // Fallback: simple extraction
-        return prompt.split(/[,.\s]+/)
-            .filter(w => w.length > 2)
-            .slice(0, 5)
-            .join(' ');
-    }
-}
 
 export async function generateImage(prompt: string, overrideQuery?: string): Promise<string[]> {
     try {
-        let keywords: string;
+        console.log(`🎨 Gemini orqali rasmlar yaratilmoqda: ${prompt}`);
         
-        if (overrideQuery && overrideQuery.trim().length > 0) {
-            // Foydalanuvchi o'zi kalit so'z bergan
-            keywords = overrideQuery.trim();
-            console.log(`👤 Foydalanuvchi kalit so'zi: ${keywords}`);
-        } else {
-            // AI dan kalit so'zlar so'raymiz
-            keywords = await generateImageKeywords(prompt);
-        }
-        
-        const searchQuery = encodeURIComponent(keywords);
-        console.log(`🔍 Unsplash dan qidirilmoqda: ${keywords}`);
-        
-        // Use Unsplash API for high-quality, topic-relevant images
-        const UNSPLASH_ACCESS_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY || 'EfKQ8Gr6e9EMEkbG9PL3YKnbDQamvfqtiKL0ji6T1r8';
         const imagePromises = [];
         
         for (let i = 0; i < 4; i++) {
-            // Each request gets a different page to get varied images
-            const page = i + 1;
-            const unsplashUrl = `https://api.unsplash.com/search/photos?query=${searchQuery}&orientation=portrait&per_page=1&page=${page}&content_filter=high`;
-            
             imagePromises.push(
-                fetch(unsplashUrl, {
-                    headers: { 
-                        'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`,
-                        'Accept-Version': 'v1'
-                    }
-                })
-                .then(async response => {
-                    if (!response.ok) {
-                        throw new Error(`Unsplash API error: ${response.status}`);
-                    }
-                    const data = await response.json();
-                    
-                    if (data.results && data.results.length > 0) {
-                        const photo = data.results[0];
-                        // Use regular size for better quality (portrait orientation)
-                        const imageUrl = photo.urls.regular;
-                        console.log(`✅ Rasm ${i + 1}:`, photo.alt_description || photo.description || 'Unsplash photo');
-                        console.log(`   📷 Fotograf: ${photo.user.name}`);
-                        
-                        // Fetch and convert to base64
-                        const imgResponse = await fetch(imageUrl);
-                        const blob = await imgResponse.blob();
-                        const buffer = await blob.arrayBuffer();
-                        const base64 = btoa(
-                            new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-                        );
-                        return `data:image/jpeg;base64,${base64}`;
-                    } else {
-                        throw new Error('No photos found');
-                    }
-                })
-                .catch(error => {
-                    console.warn(`⚠️ Unsplash rasm ${i + 1} yuklanmadi:`, error.message);
-                    // Fallback to Pexels as secondary source
-                    const PEXELS_API_KEY = import.meta.env.VITE_PEXELS_API_KEY || '563492ad6f91700001000001c69e2c70104b40298c1a5f26edc22c47';
-                    const pexelsUrl = `https://api.pexels.com/v1/search?query=${searchQuery}&orientation=portrait&per_page=1&page=${page}`;
-                    
-                    return fetch(pexelsUrl, {
-                        headers: { 'Authorization': PEXELS_API_KEY }
-                    })
-                    .then(async resp => {
-                        if (!resp.ok) throw new Error('Pexels failed');
-                        const data = await resp.json();
-                        if (data.photos && data.photos.length > 0) {
-                            console.log(`🔄 Pexels dan olingan rasm ${i + 1}`);
-                            const imageUrl = data.photos[0].src.large;
-                            const imgResponse = await fetch(imageUrl);
-                            const blob = await imgResponse.blob();
-                            const buffer = await blob.arrayBuffer();
-                            const base64 = btoa(
-                                new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-                            );
-                            return `data:image/jpeg;base64,${base64}`;
+                (async () => {
+                    try {
+                        const response = await ai.models.generateContent({
+                            model: "gemini-2.0-flash-exp",
+                            contents: [
+                                {
+                                    parts: [
+                                        {
+                                            text: `Shu mavzu uchun yuqori sifatli, fotorealistik rasm yarating: "${prompt}". Rasm portrait orientatsiyada (600x1067 piksel) bo'lishi kerak. Rasm raqami: ${i + 1}/4`
+                                        }
+                                    ]
+                                }
+                            ],
+                            config: {
+                                responseModalities: ["image"],
+                            },
+                        });
+
+                        const imageData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                        if (imageData) {
+                            console.log(`✅ Rasm ${i + 1} Gemini orqali yaratildi`);
+                            return `data:image/jpeg;base64,${imageData}`;
+                        } else {
+                            throw new Error("Rasm ma'lumotlari olinmadi");
                         }
-                        throw new Error('Pexels no results');
-                    })
-                    .catch(() => {
-                        console.warn(`⚠️ Picsum fallback rasm ${i + 1}`);
-                        // Final fallback to Picsum
-                        return fetch(`https://picsum.photos/600/1067?random=${Date.now()}_${i}`)
-                            .then(async resp => {
-                                if (!resp.ok) throw new Error('Picsum failed');
-                                const blob = await resp.blob();
-                                const buffer = await blob.arrayBuffer();
-                                const base64 = btoa(
-                                    new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-                                );
-                                return `data:image/jpeg;base64,${base64}`;
-                            })
-                            .catch(() => {
-                                console.warn(`🎨 Gradient yaratilmoqda rasm ${i + 1} uchun`);
-                                return `data:image/jpeg;base64,${createGradientPlaceholder(prompt, i)}`;
-                            });
-                    });
-                })
+                    } catch (error) {
+                        console.warn(`⚠️ Gemini rasm ${i + 1} yaratishda xato:`, error);
+                        // Fallback to gradient
+                        console.log(`🎨 Gradient yaratilmoqda rasm ${i + 1} uchun`);
+                        return `data:image/jpeg;base64,${createGradientPlaceholder(prompt, i)}`;
+                    }
+                })()
             );
             
-            // Small delay between requests to avoid rate limiting (Unsplash: 50 req/hour)
-            await new Promise(resolve => setTimeout(resolve, 300));
+            // Delay between requests to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 500));
         }
         
         const images = await Promise.all(imagePromises);
-        console.log('🎉 Barcha rasmlar yuklandi:', images.length);
+        console.log('🎉 Barcha rasmlar yaratildi:', images.length);
         return images;
     } catch (error) {
         console.error("Rasmlar yaratishda xato:", error);
