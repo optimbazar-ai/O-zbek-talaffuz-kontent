@@ -124,15 +124,31 @@ export async function generateImage(prompt: string, overrideQuery?: string): Pro
             imagePromises.push(
                 (async () => {
                     try {
-                        const response = await ai.models.generateContent({
-                            model: "gemini-2.0-flash-exp",
-                            contents: `Yuqori sifatli, fotorealistik rasm yarating. Mavzu: "${prompt}". Rasm portrait orientatsiyada (600x1067 piksel) bo'lishi kerak. Rasm raqami: ${i + 1}/4. Faqat rasmni yarating, matn yozma.`,
-                            config: {
-                                responseModalities: [Modality.IMAGE],
+                        // Imagen 3 modeli orqali rasm generatsiya qilish
+                        const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateContent?key=' + (API_KEY || ''), {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
                             },
+                            body: JSON.stringify({
+                                contents: [{
+                                    parts: [{
+                                        text: `Yuqori sifatli, fotorealistik rasm yarating. Mavzu: "${prompt}". Rasm portrait orientatsiyada (600x1067 piksel) bo'lishi kerak. Rasm raqami: ${i + 1}/4.`
+                                    }]
+                                }],
+                                generationConfig: {
+                                    outputMimeType: 'image/jpeg'
+                                }
+                            })
                         });
 
-                        const imageData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                        if (!response.ok) {
+                            throw new Error(`API error: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+                        const imageData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                        
                         if (imageData) {
                             console.log(`✅ Rasm ${i + 1} Gemini orqali yaratildi`);
                             return `data:image/jpeg;base64,${imageData}`;
@@ -149,7 +165,7 @@ export async function generateImage(prompt: string, overrideQuery?: string): Pro
             );
             
             // Delay between requests to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 800));
         }
         
         const images = await Promise.all(imagePromises);
