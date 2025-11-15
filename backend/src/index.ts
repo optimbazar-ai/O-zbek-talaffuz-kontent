@@ -149,7 +149,7 @@ bot.command('status', async (ctx: MyContext) => {
       ctx.reply(statusText);
     } catch (dbError) {
       logger.warn('Could not fetch posts:', dbError);
-      ctx.reply('📊 Database'dan ma\'lumot olib bo\'lmadi.');
+      ctx.reply("📊 Database'dan ma'lumot olib bo'lmadi.");
     }
     
   } catch (error) {
