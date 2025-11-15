@@ -3,16 +3,25 @@ import { logger } from '../utils/logger.js';
 
 export async function connectDatabase(): Promise<void> {
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/uzbek-content';
+    const mongoUri = process.env.MONGODB_URI;
+    
+    // MongoDB optional - bot MongoDB'siz ham ishlay oladi
+    if (!mongoUri) {
+      logger.warn('⚠️ MONGODB_URI not set. Running without database. Posts will not be saved.');
+      return;
+    }
     
     await mongoose.connect(mongoUri);
-    
     logger.info('✅ MongoDB connected successfully');
     
   } catch (error) {
-    logger.error('❌ MongoDB connection error:', error);
-    throw error;
+    logger.warn('⚠️ MongoDB connection failed. Running without database:', error);
+    // Don't throw - bot can work without database
   }
+}
+
+export function isMongoConnected(): boolean {
+  return mongoose.connection.readyState === 1;
 }
 
 export async function disconnectDatabase(): Promise<void> {

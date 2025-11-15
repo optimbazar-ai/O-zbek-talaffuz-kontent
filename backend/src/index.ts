@@ -3,13 +3,18 @@ import dotenv from 'dotenv';
 import cron from 'node-cron';
 import { generateDailyContent } from './services/contentGenerator.js';
 import { postToInstagram } from './services/instagramService.js';
-import { connectDatabase } from './database/connection.js';
+import { connectDatabase, isMongoConnected } from './database/connection.js';
 import { Post } from './models/Post.js';
 import { logger } from './utils/logger.js';
 
 dotenv.config();
 
-const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN || '');
+if (!process.env.TELEGRAM_BOT_TOKEN) {
+  logger.error('❌ TELEGRAM_BOT_TOKEN not set in .env file');
+  process.exit(1);
+}
+
+const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
 interface MyContext extends Context {
   session?: {
@@ -49,32 +54,45 @@ bot.command('generate', async (ctx: MyContext) => {
       return;
     }
     
-    // Save to database
-    const post = new Post({
-      userId,
-      username,
-      content,
-      status: 'generated',
-      createdAt: new Date(),
-    });
-    
-    await post.save();
-    
-    // Send images to Telegram
-    for (let i = 0; i < content.length; i++) {
-      const item = content[i];
-      await ctx.replyWithPhoto(
-        { url: item.imageUrl },
-        {
-          caption: `📸 Rasm ${i + 1}/10\n\n${item.script.join('\n')}\n\n#uzbekistan #reels`,
-        }
-      );
-      
-      // Delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 500));
+    // Save to database (if MongoDB connected)
+    let postId = 'local-' + Date.now();
+    if (isMongoConnected()) {
+      try {
+        const post = new Post({
+          userId,
+          username,
+          content,
+          status: 'generated',
+          createdAt: new Date(),
+        });
+        await post.save();
+        postId = post._id?.toString() || postId;
+      } catch (dbError) {
+        logger.warn('Could not save to database:', dbError);
+      }
     }
     
-    ctx.reply(`✅ 10 ta rasm tayyor! Post ID: ${post._id}`);
+    // Send images to Telegram
+    ctx.reply('📸 Rasmlar yuborilmoqda...');
+    for (let i = 0; i < content.length; i++) {
+      const item = content[i];
+      try {
+        await ctx.replyWithPhoto(
+          { url: item.imageUrl },
+          {
+            caption: `📸 Rasm ${i + 1}/${content.length}\n\n${item.script.join('\n')}\n\n${item.hashtags.join(' ')}`,
+          }
+        );
+      } catch (photoError) {
+        logger.warn(`Could not send photo ${i + 1}:`, photoError);
+        ctx.reply(`⚠️ Rasm ${i + 1} yuborilmadi`);
+      }
+      
+      // Delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    ctx.reply(`✅ 10 ta rasm tayyor! Post ID: ${postId}`);
     logger.info(`Generated 10 images for user ${username}`);
     
   } catch (error) {
@@ -109,20 +127,30 @@ Keyingi generatsiya: Ertaga 09:00 da
 
 bot.command('status', async (ctx: MyContext) => {
   try {
-    const userId = ctx.from?.id || 0;
-    const recentPosts = await Post.find({ userId }).sort({ createdAt: -1 }).limit(5);
-    
-    if (recentPosts.length === 0) {
-      ctx.reply('📊 Hali post yo\'q.');
+    if (!isMongoConnected()) {
+      ctx.reply('📊 Database ulanmagan. Hali post yo\'q.');
       return;
     }
     
-    let statusText = '📊 Oxirgi postlar:\n\n';
-    recentPosts.forEach((post, index) => {
-      statusText += `${index + 1}. ${post.createdAt.toLocaleDateString('uz-UZ')} - ${post.status}\n`;
-    });
-    
-    ctx.reply(statusText);
+    const userId = ctx.from?.id || 0;
+    try {
+      const recentPosts = await Post.find({ userId }).sort({ createdAt: -1 }).limit(5);
+      
+      if (recentPosts.length === 0) {
+        ctx.reply('📊 Hali post yo\'q.');
+        return;
+      }
+      
+      let statusText = '📊 Oxirgi postlar:\n\n';
+      recentPosts.forEach((post, index) => {
+        statusText += `${index + 1}. ${post.createdAt.toLocaleDateString('uz-UZ')} - ${post.status}\n`;
+      });
+      
+      ctx.reply(statusText);
+    } catch (dbError) {
+      logger.warn('Could not fetch posts:', dbError);
+      ctx.reply('📊 Database'dan ma\'lumot olib bo\'lmadi.');
+    }
     
   } catch (error) {
     logger.error('Status command error:', error);
